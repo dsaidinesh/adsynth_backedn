@@ -16,8 +16,5 @@ pydantic-settings==2.1.0
 uvicorn[standard]==0.27.1
 pyjwt==2.8.0
 email-validator==2.1.0.post1
-postgrest==0.13.0
-python-multipart==0.0.9
-starlette==0.36.3
-typing-extensions>=4.10,<5
-websockets==12.0
+
+
