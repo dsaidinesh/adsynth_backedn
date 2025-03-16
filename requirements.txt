@@ -2,19 +2,11 @@ praw
 python-dotenv
 requests
 groq
-pytest
 fastapi
 sqlalchemy
 httpx
 supabase
-python-jose[cryptography]
-passlib[bcrypt]
-bcrypt
 uvicorn
 pydantic
-pydantic-settings
-uvicorn[standard]
-pyjwt
-email-validator
 
 
