@@ -17,6 +17,9 @@ def get_supabase() -> Client:
     """Get Supabase client."""
     return get_supabase_client()
 
+# Update the import statement
+from jwt import PyJWT
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     supabase: Client = Depends(get_supabase)
@@ -32,8 +35,11 @@ async def get_current_user(
         # Set the access token for the client
         supabase.postgrest.auth(token)
         
+        # Create a PyJWT instance
+        jwt_instance = PyJWT()
+        
         # Get user data from the token
-        decoded = jwt.decode(token, options={"verify_signature": False})
+        decoded = jwt_instance.decode(token, options={"verify_signature": False})
         user_id = decoded.get('sub')
         
         if not user_id:
@@ -46,5 +52,8 @@ async def get_current_user(
             "username": decoded.get('username')
         }
         
+    except Exception as e:
+        print(f"Token validation error: {str(e)}")
+        raise credentials_exception
     except (jwt.InvalidTokenError, APIError):
         raise credentials_exception
