@@ -21,6 +21,7 @@ from src.api.dependencies import get_supabase, get_current_user
 from src.api.campaigns import router as campaigns_router
 from src.api.ad_scripts import router as ad_scripts_router
 from supabase import Client
+from pydantic import BaseModel
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -131,11 +132,18 @@ async def login_for_access_token(
         
         print(f"Auth response: {auth_response}")  # Debug log
         
-        if not auth_response.user:
+        if not auth_response.user or not auth_response.session:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials",
                 headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Ensure both tokens are present in the session
+        if not auth_response.session.access_token or not auth_response.session.refresh_token:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Authentication successful but token generation failed"
             )
         
         # Return both access and refresh tokens
@@ -155,6 +163,43 @@ async def login_for_access_token(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication failed: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+@app.post("/api/token/refresh", response_model=Token)
+async def refresh_access_token(
+    request: RefreshTokenRequest,
+    supabase: Client = Depends(get_supabase)
+):
+    """Refresh access token using refresh token."""
+    try:
+        # Attempt to refresh the session
+        refresh_response = supabase.auth.refresh_session({
+            "refresh_token": request.refresh_token
+        })
+        
+        if not refresh_response or not refresh_response.session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Return new tokens
+        return {
+            "access_token": refresh_response.session.access_token,
+            "refresh_token": refresh_response.session.refresh_token,
+            "token_type": "bearer"
+        }
+        
+    except Exception as e:
+        print(f"Token refresh error: {str(e)}")  # Debug log
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token refresh failed: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

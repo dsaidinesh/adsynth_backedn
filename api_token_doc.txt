@@ -1,0 +1,348 @@
+
+Search
+Write
+Sign up
+
+Sign in
+
+
+
+Home
+
+Library
+
+Stories
+
+Stats
+
+Implementing Supabase Authentication with Next.js and FastAPI
+Ojas Kapre
+Ojas Kapre
+
+·
+Follow
+
+7 min read
+·
+Aug 21, 2024
+80
+
+
+
+
+In this blog, we’ll dive into how to set up authentication using Supabase in a Next.js application and handle JWT verification in a FastAPI backend. This approach ensures that your users are authenticated securely while enabling a seamless interaction between the frontend and backend.
+
+
+We’ll walk through the following steps:
+
+Setting up Supabase in your Next.js application.
+Handling user authentication in Next.js.
+Verifying JWT tokens in FastAPI.
+Before diving into the authentication setup, ensure you have a Next.js application and Supabase project already set up and configured.
+
+Setting Supabase in Next.JS application
+In this section, we’ll dive into how Supabase authentication is set up in the Next.js application. The implementation leverages both @supabase/ssr and @supabase/supabase-js libraries to handle authentication seamlessly on both the server and client sides. Below, I’ll highlight the key files, functions, and concepts used to achieve this, with links to the corresponding code in the GitHub repository in order to keep this blog brief.
+
+Don’t forget to fill in your .env file with the necessary SUPABASE_API_KEY and SUPABASE_ANON_KEYvalues to ensure proper configuration of Supabase in your application.
+
+Why Use @supabase/ssr and @supabase/supabase-js?
+@supabase/ssr: This library is essential for creating Supabase clients that handle server-side rendering (SSR) in Next.js, ensuring seamless session management across different environments.
+@supabase/supabase-js: The core JavaScript library from Supabase, which provides methods to interact with Supabase services, such as authentication, real-time databases, and more.
+Client-Side Supabase Client (client.ts)
+Purpose: This file initializes and manages the Supabase client on the client side, allowing users to interact with Supabase services directly from the browser.
+
+Key Function:
+
+createBrowserClient: This function, imported from @supabase/ssr, is used to create a Supabase client specifically for browser environments. It’s crucial for handling actions like signing in and managing sessions on the client side.
+You can check out the complete implementation of the client-side Supabase client here.
+
+Server-Side Supabase Client (server.ts)
+Purpose: This file is responsible for managing the Supabase client on the server side, ensuring secure and consistent session management across SSR pages and API routes.
+
+Key Function:
+
+createServerClient: This function, also from @supabase/ssr, creates a Supabase client for server-side operations. It handles cookies and session management on the server, which is crucial for SSR in Next.js.
+For the full code, see the server-side Supabase client implementation.
+
+Session Management Middleware (middleware.ts)
+Purpose: This middleware manages user sessions and handles redirects based on the authentication state. It’s particularly useful for ensuring that logged-in users are redirected appropriately and that sessions are refreshed as needed.
+
+Key Function:
+
+createServerClient: Similar to server.ts, this function creates a server-side Supabase client to manage cookies and sessions.
+NextResponse: A utility from Next.js used to manage HTTP responses, including redirects, based on authentication status.
+Check out the full middleware implementation here.
+
+Authentication Components
+Sign In Component (Login.tsx)
+
+Purpose: This component provides the UI and logic for user sign-in using email/password or OAuth providers like Google, Facebook, or GitHub.
+
+Key Functions:
+
+supabase.auth.signInWithPassword: Authenticates users with their email and password.
+supabase.auth.signInWithOAuth: Handles OAuth sign-in for providers.
+For a detailed look at the sign-in process, see the Sign In component code.
+
+Sign Up Component (SignUp.tsx)
+
+Purpose: This component allows users to create a new account using their email and password, with support for OAuth sign-ups.
+
+Key Functions:
+
+supabase.auth.signUp: Registers a new user and sends an activation link to their email.
+supabase.auth.signInWithOAuth: Handles OAuth sign-up for providers.
+You can view the full Sign Up component implementation here.
+
+OAuth Button Component (OAuthButton.tsx)
+
+Purpose: This is a reusable button component for OAuth sign-ins. It dynamically changes its icon and label based on the selected provider (Google, GitHub, or Facebook).
+
+Explore the OAuth Button component.
+
+Authentication Callback Handling (auth/callback/route.ts)
+
+Purpose: This route handles OAuth callback responses and exchanges the authorization code for a session token. This ensures that the user is authenticated and redirected to the appropriate page.
+
+For the full implementation, visit the authentication callback route code.
+
+Managing User Sessions with Context (AuthContext.tsx)
+
+Purpose: This context provides a global state to manage user authentication across the application. It allows any component to access the user’s authentication state and perform actions like logging out or retrieving the session token.
+
+Key Functions:
+
+supabase.auth.getUser: Retrieves the current user’s session and authentication state.
+supabase.auth.onAuthStateChange: Listens for changes in the user’s authentication state.
+Check out the full AuthContext implementation.
+
+Verifying JSON Web Tokens in FastAPI
+In this section, we’ll walk through how to set up JSON Web Token (JWT) verification in FastAPI, using Supabase for authentication and integrating it with your chat application. We’ll use the supabase-py library to handle user authentication and verification seamlessly.
+
+Before diving into the implementation, ensure you’ve set up the project by following the instructions in the README file in the backend folder.
+
+For the purpose of this blog, you can ignore anything related to database initialization or database tables creation as it not relevant to setting up supabase auth verification
+
+Libraries Used
+supabase-py: This is a Python client library for Supabase, used to interact with the Supabase backend for user authentication, database interactions, and more.
+Setting Up the FastAPI Application
+In the app/main.py file, the FastAPI application is initialized, CORS middleware is configured, and the necessary database tables are created using SQLAlchemy. This setup is crucial for enabling smooth communication between the frontend and backend, especially when they are hosted on different domains.
+
+Key Points:
+
+CORS Middleware: This middleware allows cross-origin requests, which is essential when the frontend and backend are not on the same domain.
+Database Initialization: The create_tables() function is called on startup to ensure that the database schema is ready, with tables for profiles, chat sessions, and messages.
+Check out the FastAPI application setup code here.
+
+1. Supabase Client Creation
+
+The first step in verifying JWTs is to create a Supabase client that can interact with Supabase’s authentication services. This is done using the create_client() function. The Supabase client is initialized with the Supabase URL and API key, which are retrieved from the environment variables.
+
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_ANON_KEY"]
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+Why This is Important: The Supabase client acts as a bridge between your FastAPI backend and Supabase’s authentication services. It enables your backend to perform operations such as verifying JWTs and managing user sessions.
+2. JWT Verification
+
+The core of the authentication process lies in the verify_jwt() function. This function is designed to extract the JWT from the request's Authorization header and verify its validity with Supabase.
+
+def verify_jwt(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        user = supabase.auth.get_user(token)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return user
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
+How It Works:
+
+Token Extraction: The JWT is extracted from the Authorization header using the HTTPBearer security scheme.
+Token Verification: The extracted token is then passed to Supabase’s auth.get_user() method, which verifies the token's validity. If the token is valid, the user associated with the token is returned.
+Error Handling: If the token is invalid or expired, an HTTPException with a 401 status code is raised, indicating that the request is unauthorized.
+Why This is Important: This function is crucial for securing your API endpoints. By verifying the JWT, you ensure that only authenticated users can access certain routes, protecting sensitive data and functionality from unauthorized access.
+
+You can find the dependency code for JWT verification here.
+
+Using JWT Verification dependency in API Routes
+In app/dependencies.py, JWT verification is implemented using the supabase-py library, ensuring that only authenticated users can access protected routes.
+
+Key Functionalities:
+
+Supabase Client Creation: The Supabase client is initialized with the create_client() function, using the Supabase URL and API key.
+JWT Verification: The verify_jwt() function extracts the JWT from the request's authorization header, verifies it with Supabase's auth.get_user() method, and ensures the token is valid. If the token is invalid, it raises an HTTP 401 Unauthorized error.
+This dependency is then used throughout the application to protect routes and ensure that only authenticated users can access certain endpoints.
+
+Using JWT Verification in API Routes
+In app/api/routers/chat.py, the verify_jwt dependency is applied to various API routes to ensure that only authenticated users can interact with the chat sessions and messages.
+
+Key Points:
+
+Route Protection: Each route that requires user authentication uses user=Depends(verify_jwt) to enforce JWT verification.
+User Verification: In routes like start_chat, continue_chat, and delete_chat_session, the authenticated user is verified against the session they are trying to interact with, ensuring that users can only manage their own sessions.
+By leveraging the verify_jwt dependency across your API routes, you ensure that your application securely handles user authentication and protects user data.
+
+You can find the full code for the protected routes here.
+
+This setup effectively ties together Supabase’s authentication capabilities with FastAPI’s powerful dependency injection system, creating a secure and scalable chat application.
+
+Conclusion
+In this blog, we walked through the implementation of authentication using Supabase in a Next.js application and how to handle JWT verification in a FastAPI backend. This setup ensures secure user authentication while enabling smooth interaction between the frontend and backend, creating a robust and scalable chat application.
+
+Key Takeaways:
+
+Setting Up Supabase in Next.js: We explored the process of integrating Supabase authentication into a Next.js application, using both @supabase/ssr and @supabase/supabase-js libraries to manage sessions and user authentication seamlessly across client and server environments.
+Verifying JWT Tokens in FastAPI: On the backend, we implemented JWT verification using the supabase-py library within FastAPI. This ensures that only authenticated users can access protected routes, securing the application’s sensitive data and functionality.
+Combining Frontend and Backend Security: By integrating Supabase with both Next.js and FastAPI, we created a secure, full-stack application where user authentication and session management are handled efficiently.
+This approach demonstrates the power of combining modern web frameworks like Next.js and FastAPI with Supabase’s comprehensive authentication services, providing a strong foundation for building secure, scalable applications.
+
+For a complete code implementation and further details, refer to the respective files in the GitHub repository.
+
+Nextjs
+Supabase
+Fastapi
+Python
+Authentication
+80
+
+
+
+Ojas Kapre
+Written by Ojas Kapre
+22 Followers
+·
+2 Following
+Software Engineer with a passion for full-stack development, AI, and cloud solutions. Master's in Software Engineering from CMU. Lifelong learner.
+
+Follow
+No responses yet
+
+Write a response
+
+What are your thoughts?
+
+Cancel
+Respond
+
+Also publish to my profile
+
+More from Ojas Kapre
+Implementing Stripe Subscriptions with Supabase, Next.js, and FastAPI
+Ojas Kapre
+Ojas Kapre
+
+Implementing Stripe Subscriptions with Supabase, Next.js, and FastAPI
+In this blog, I’ll walk you through how to set up a subscription service using Stripe, with Next.js for the frontend, FastAPI for the…
+Aug 24, 2024
+61
+3
+Fixing Input Focus Issues in a Shadcn/Radix UI Card & UI Dropdown Menu in Next.js
+Ojas Kapre
+Ojas Kapre
+
+Fixing Input Focus Issues in a Shadcn/Radix UI Card & UI Dropdown Menu in Next.js
+Introduction:
+Aug 21, 2024
+3
+1
+Building a Research Assistant with Langchain, OpenAI GPT-3.5, and Streamlit
+Ojas Kapre
+Ojas Kapre
+
+Building a Research Assistant with Langchain, OpenAI GPT-3.5, and Streamlit
+Introduction
+May 26, 2024
+51
+Building Video Q&A application using Langchain, OpenAI Whisper, GPT 3.5, Pinecone and Streamlit
+Ojas Kapre
+Ojas Kapre
+
+Building Video Q&A application using Langchain, OpenAI Whisper, GPT 3.5, Pinecone and Streamlit
+Introduction
+May 29, 2024
+51
+See all from Ojas Kapre
+Recommended from Medium
+Boosting Your Full-Stack Workflow with Next.js, FastAPI and Vercel
+Kaveh Pouran Yousef, PhD
+Kaveh Pouran Yousef, PhD
+
+Boosting Your Full-Stack Workflow with Next.js, FastAPI and Vercel
+This article describes how you can combine Next.js with FastAPI to build a fullstack application and deploy it with Vercel. It also…
+Dec 6, 2024
+1
+FastAPI + Pydantic + LLMs = Build APIs the Right Way
+alejandro
+alejandro
+
+FastAPI + Pydantic + LLMs = Build APIs the Right Way
+This is the way to build LLM APIs
+
+5d ago
+4
+Real time react and nextjs applications using ws (WebSocket Library) and socket io
+Adeel Ahmad
+Adeel Ahmad
+
+Building Fast Real-Time Applications in Next.js with WebSockets
+Websockets and real-time interactions in NextJs React Applications
+
+Oct 14, 2024
+1
+How to Implement Google Authentication in Next.js with FastAPI or Node.js (Step-by-Step)
+JavaScript in Plain English
+In
+
+JavaScript in Plain English
+
+by
+
+Ramesh kannan s
+
+How to Implement Google Authentication in Next.js with FastAPI or Node.js (Step-by-Step)
+In this guide, we’ll walk through integrating Google Authentication into a Next.js application using FastAPI as a backend. Google OAuth is…
+
+Nov 7, 2024
+15
+Hydration issue resolved in Next.js
+Ankit
+Ankit
+
+Fixing Hydration Mismatch Errors in Next.js for Better SSR Performance
+Is your Next.js app showing weird errors in the console and behaving strangely? Hydration mismatches might be the culprit. Let’s fix them…
+
+3d ago
+1
+1
+Building a Secure User Authentication System with Streamlit and SQLite
+Kuldeepkumawat
+Kuldeepkumawat
+
+Building a Secure User Authentication System with Streamlit and SQLite
+Creating a secure, professional-grade authentication system often appears complex, especially with extensive frameworks. However, a…
+
+Oct 26, 2024
+33
+1
+See more recommendations
+Help
+
+Status
+
+About
+
+Careers
+
+Press
+
+Blog
+
+Privacy
+
+Terms
+
+Text to speech
+
+Teams
+
