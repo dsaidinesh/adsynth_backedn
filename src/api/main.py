@@ -187,8 +187,7 @@ async def refresh_access_token(
                 detail="Invalid refresh token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
-        # Return new tokens
+      # Return new tokens
         return {
             "access_token": refresh_response.session.access_token,
             "refresh_token": refresh_response.session.refresh_token,
